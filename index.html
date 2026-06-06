@@ -1,1 +1,451 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MIOUVX | Living Intelligence</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #010003;
+            --purple: #6a0dad;
+            --gold: #FFB800;
+            --silver: #e0e0e0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body, html {
+            background-color: var(--bg);
+            color: var(--silver);
+            font-family: 'Helvetica Neue', sans-serif;
+            overflow-x: hidden;
+            overscroll-behavior: none;
+            cursor: none;
+        }
+
+        /* Cinematic WebGL Canvas */
+        #gl-canvas {
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 1; pointer-events: none;
+        }
+
+        /* Interactive Cursor */
+        #cursor-dot {
+            position: fixed; width: 4px; height: 4px; background: var(--gold);
+            border-radius: 50%; z-index: 9999; pointer-events: none;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px var(--gold), 0 0 20px var(--gold);
+            transition: width 0.2s, height 0.2s;
+        }
+        #cursor-ring {
+            position: fixed; width: 30px; height: 30px;
+            border: 1px solid rgba(106, 13, 173, 0.5); border-radius: 50%;
+            z-index: 9998; pointer-events: none;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, border-color 0.3s;
+        }
+
+        /* Audio Control */
+        #audio-core {
+            position: fixed; bottom: 30px; right: 30px; z-index: 100;
+            background: rgba(1, 0, 3, 0.5); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--silver); padding: 10px 20px; font-size: 10px;
+            letter-spacing: 3px; text-transform: uppercase; cursor: none;
+            transition: 0.4s; overflow: hidden;
+        }
+        #audio-core:hover { border-color: var(--gold); color: var(--gold); }
+        
+        /* Storytelling Layers */
+        main { position: relative; z-index: 10; }
+        
+        .chapter {
+            height: 100vh; width: 100vw;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            text-align: center; padding: 0 5vw;
+        }
+
+        .cinematic-text {
+            font-size: clamp(2rem, 5vw, 6rem);
+            font-weight: 200; letter-spacing: 0.5em;
+            text-transform: uppercase; opacity: 0;
+            transform: translateY(30px);
+            color: #fff;
+            text-shadow: 0 0 30px rgba(255,255,255,0.1);
+        }
+
+        .sub-text {
+            font-size: 0.75rem; letter-spacing: 0.4em;
+            color: var(--purple); margin-top: 20px;
+            opacity: 0; font-family: monospace;
+        }
+
+        .cta-button {
+            margin-top: 50px; padding: 15px 40px;
+            background: transparent; border: 1px solid rgba(255,184,0,0.3);
+            color: var(--gold); letter-spacing: 4px; font-size: 0.8rem;
+            text-transform: uppercase; text-decoration: none;
+            transition: 0.5s; opacity: 0; position: relative;
+        }
+        .cta-button::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--gold); opacity: 0; z-index: -1; transition: 0.5s;
+        }
+        .cta-button:hover {
+            color: var(--bg); border-color: var(--gold);
+        }
+        .cta-button:hover::after { opacity: 1; }
+
+        /* Loader */
+        #void-loader {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--bg); z-index: 99999;
+            display: flex; justify-content: center; align-items: center;
+            transition: opacity 2s ease-in-out;
+        }
+        .loader-ring {
+            width: 150px; height: 150px; border-radius: 50%;
+            border: 1px solid transparent;
+            border-top-color: var(--purple); border-bottom-color: var(--gold);
+            animation: spin 3s linear infinite;
+        }
+        .loader-core {
+            position: absolute; font-family: monospace; font-size: 0.8rem;
+            letter-spacing: 5px; color: var(--silver);
+            animation: pulse 2s ease infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        @media (max-width: 768px) {
+            #cursor-dot, #cursor-ring { display: none; }
+            body, html { cursor: auto; }
+            .cinematic-text { letter-spacing: 0.2em; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="void-loader">
+        <div class="loader-ring"></div>
+        <div class="loader-core">AWAKENING</div>
+    </div>
+
+    <div id="cursor-dot"></div>
+    <div id="cursor-ring"></div>
+
+    <button id="audio-core">Initiate Resonance [ OFF ]</button>
+
+    <canvas id="gl-canvas"></canvas>
+
+    <main>
+        <section class="chapter" id="ch1">
+            <h1 class="cinematic-text">MIOUVX</h1>
+            <div class="sub-text">BEYOND COMPUTATION</div>
+        </section>
+
+        <section class="chapter" id="ch2">
+            <h2 class="cinematic-text">The Hidden<br>Layers</h2>
+            <div class="sub-text">STRUCTURING PURE CHAOS</div>
+        </section>
+
+        <section class="chapter" id="ch3">
+            <h2 class="cinematic-text" style="color: var(--gold);">The Observers</h2>
+            <div class="sub-text">PROCEDURAL CONSCIOUSNESS</div>
+        </section>
+
+        <section class="chapter" id="ch4">
+            <h2 class="cinematic-text" style="color: var(--purple);">Living<br>Intelligence</h2>
+            <div class="sub-text">MULTIMODAL SYNTHESIS</div>
+        </section>
+
+        <section class="chapter" id="ch5">
+            <h2 class="cinematic-text">The Threshold</h2>
+            <a href="#" class="cta-button" id="enter-btn">Merge with the System</a>
+        </section>
+    </main>
+
+    <script>
+        // --- 1. INITIALIZATION & LOADER ---
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('void-loader');
+                loader.style.opacity = '0';
+                setTimeout(() => { loader.style.display = 'none'; startExperience(); }, 2000);
+            }, 1500);
+        });
+
+        // --- 2. CUSTOM CURSOR ---
+        const cursorDot = document.getElementById('cursor-dot');
+        const cursorRing = document.getElementById('cursor-ring');
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        
+        if (window.innerWidth > 768) {
+            window.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX; mouseY = e.clientY;
+                cursorDot.style.left = mouseX + 'px';
+                cursorDot.style.top = mouseY + 'px';
+                setTimeout(() => {
+                    cursorRing.style.left = mouseX + 'px';
+                    cursorRing.style.top = mouseY + 'px';
+                }, 80);
+            });
+
+            document.querySelectorAll('button, a').forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                    cursorRing.style.width = '60px'; cursorRing.style.height = '60px';
+                    cursorRing.style.borderColor = 'var(--gold)';
+                    cursorRing.style.background = 'rgba(255, 184, 0, 0.05)';
+                });
+                el.addEventListener('mouseleave', () => {
+                    cursorRing.style.width = '30px'; cursorRing.style.height = '30px';
+                    cursorRing.style.borderColor = 'rgba(106, 13, 173, 0.5)';
+                    cursorRing.style.background = 'transparent';
+                });
+            });
+        }
+
+        // --- 3. PROCEDURAL AUDIO (Web Audio API - No external files needed) ---
+        let audioCtx;
+        let masterGain, filter;
+        let isAudioPlaying = false;
+        const audioBtn = document.getElementById('audio-core');
+
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0;
+            
+            // Reverb/Space simulation
+            filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 400;
+
+            masterGain.connect(filter);
+            filter.connect(audioCtx.destination);
+
+            // Deep Cosmic Drone 1
+            const osc1 = audioCtx.createOscillator();
+            osc1.type = 'sine';
+            osc1.frequency.value = 43.65; // F1 note
+            
+            // Harmonic Drone 2
+            const osc2 = audioCtx.createOscillator();
+            osc2.type = 'triangle';
+            osc2.frequency.value = 65.41; // C2 note
+
+            // LFO for breathing effect
+            const lfo = audioCtx.createOscillator();
+            lfo.type = 'sine';
+            lfo.frequency.value = 0.05; // Very slow
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.value = 200;
+            
+            lfo.connect(lfoGain);
+            lfoGain.connect(filter.frequency);
+
+            osc1.connect(masterGain);
+            osc2.connect(masterGain);
+
+            osc1.start();
+            osc2.start();
+            lfo.start();
+        }
+
+        audioBtn.addEventListener('click', () => {
+            if (!audioCtx) initAudio();
+            isAudioPlaying = !isAudioPlaying;
+            
+            if (isAudioPlaying) {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                masterGain.gain.setTargetAtTime(0.4, audioCtx.currentTime, 2);
+                audioBtn.innerText = 'Resonance [ ON ]';
+            } else {
+                masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 1);
+                audioBtn.innerText = 'Resonance [ OFF ]';
+            }
+        });
+
+        // --- 4. HIGH-END 3D ENGINE (Three.js) ---
+        const canvas = document.getElementById('gl-canvas');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x010003, 0.03);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 15;
+
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+
+        const worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+
+        // 4A. The Core (Glassmorphism Metaphysical Entity)
+        const coreGeo = new THREE.IcosahedronGeometry(2, 4);
+        const coreMat = new THREE.MeshPhysicalMaterial({
+            color: 0x000000,
+            metalness: 0.9,
+            roughness: 0.1,
+            transmission: 1.0, // Glass effect
+            ior: 2.5,
+            thickness: 2.0,
+            envMapIntensity: 1.0,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.1,
+            wireframe: false
+        });
+        const entityCore = new THREE.Mesh(coreGeo, coreMat);
+        worldGroup.add(entityCore);
+
+        // Inner glowing soul
+        const soulGeo = new THREE.IcosahedronGeometry(1.2, 2);
+        const soulMat = new THREE.MeshBasicMaterial({ color: 0x6a0dad, wireframe: true, transparent: true, opacity: 0.5 });
+        const entitySoul = new THREE.Mesh(soulGeo, soulMat);
+        worldGroup.add(entitySoul);
+
+        // Outer Rings (Geometry)
+        const ringGeo = new THREE.TorusGeometry(3.5, 0.02, 16, 100);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xFFB800, transparent: true, opacity: 0.4 });
+        const ring1 = new THREE.Mesh(ringGeo, ringMat);
+        ring1.rotation.x = Math.PI / 2;
+        const ring2 = new THREE.Mesh(ringGeo, ringMat);
+        ring2.rotation.y = Math.PI / 2;
+        worldGroup.add(ring1);
+        worldGroup.add(ring2);
+
+        // 4B. Lighting (Volumetric feeling)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+        scene.add(ambientLight);
+
+        const purpleLight = new THREE.PointLight(0x8A2BE2, 5, 20);
+        purpleLight.position.set(5, 5, 5);
+        scene.add(purpleLight);
+
+        const goldLight = new THREE.PointLight(0xFFB800, 5, 20);
+        goldLight.position.set(-5, -5, -5);
+        scene.add(goldLight);
+
+        // 4C. Infinite Particle Field (Procedural Dust)
+        const particlesCount = 8000;
+        const posArray = new Float32Array(particlesCount * 3);
+        for(let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 50;
+        }
+        const particlesGeo = new THREE.BufferGeometry();
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMat = new THREE.PointsMaterial({
+            size: 0.02,
+            color: 0x8A2BE2,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
+        });
+        const particleMesh = new THREE.Points(particlesGeo, particlesMat);
+        scene.add(particleMesh);
+
+        // 4D. Animation Loop
+        const clock = new THREE.Clock();
+        let targetX = 0;
+        let targetY = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            // Rotate Core
+            entityCore.rotation.y = elapsedTime * 0.1;
+            entityCore.rotation.z = elapsedTime * 0.05;
+            
+            entitySoul.rotation.y = elapsedTime * -0.2;
+            entitySoul.rotation.x = elapsedTime * 0.1;
+
+            // Pulse rings
+            const scale = 1 + Math.sin(elapsedTime * 2) * 0.05;
+            ring1.scale.set(scale, scale, scale);
+            ring2.scale.set(scale, scale, scale);
+
+            // Rotate Particles
+            particleMesh.rotation.y = elapsedTime * 0.02;
+
+            // Mouse Parallax Effect
+            targetX = (mouseX / window.innerWidth - 0.5) * 2;
+            targetY = (mouseY / window.innerHeight - 0.5) * 2;
+            
+            worldGroup.rotation.y += 0.02 * (targetX - worldGroup.rotation.y);
+            worldGroup.rotation.x += 0.02 * (targetY - worldGroup.rotation.x);
+            
+            purpleLight.position.x = Math.sin(elapsedTime * 0.5) * 8;
+            purpleLight.position.z = Math.cos(elapsedTime * 0.5) * 8;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- 5. CINEMATIC SCROLL STORYTELLING (GSAP) ---
+        gsap.registerPlugin(ScrollTrigger);
+
+        function startExperience() {
+            // Initial Reveal
+            gsap.to("#ch1 .cinematic-text", { opacity: 1, y: 0, duration: 2, ease: "power3.out" });
+            gsap.to("#ch1 .sub-text", { opacity: 1, duration: 2, delay: 0.5 });
+
+            // Setup Text Animations for all chapters
+            document.querySelectorAll('.chapter').forEach((chap, index) => {
+                if(index === 0) return; // Skip first chapter for initial reveal
+                
+                gsap.to(chap.querySelector('.cinematic-text'), {
+                    scrollTrigger: { trigger: chap, start: "top 60%", toggleActions: "play reverse play reverse" },
+                    opacity: 1, y: 0, duration: 1.5, ease: "power2.out"
+                });
+                
+                gsap.to(chap.querySelector('.sub-text, .cta-button'), {
+                    scrollTrigger: { trigger: chap, start: "top 60%", toggleActions: "play reverse play reverse" },
+                    opacity: 1, duration: 1.5, delay: 0.3
+                });
+            });
+
+            // --- 3D Camera & Object Choreography tied to Scroll ---
+            const tl = gsap.timeline({
+                scrollTrigger: { trigger: "main", start: "top top", end: "bottom bottom", scrub: 1.5 }
+            });
+
+            // Chapter 2: Move closer, shift color
+            tl.to(camera.position, { z: 8, ease: "none" }, 0);
+            tl.to(coreMat.color, { r: 0.41, g: 0.05, b: 0.67, ease: "none" }, 0); // Deep Purple
+
+            // Chapter 3: Enter the core, chaotic rotation
+            tl.to(camera.position, { z: 4, ease: "none" }, 1);
+            tl.to(worldGroup.rotation, { z: Math.PI / 2, ease: "none" }, 1);
+            tl.to(goldLight, { intensity: 10, ease: "none" }, 1);
+
+            // Chapter 4: Pull back, infinite field
+            tl.to(camera.position, { z: 12, x: 5, ease: "none" }, 2);
+            tl.to(coreMat.color, { r: 1.0, g: 0.72, b: 0.0, ease: "none" }, 2); // Gold
+
+            // Chapter 5: Face to face
+            tl.to(camera.position, { z: 6, x: 0, ease: "none" }, 3);
+            tl.to(entityCore.scale, { x: 1.2, y: 1.2, z: 1.2, ease: "none" }, 3);
+        }
+    </script>
+</body>
+</html>
